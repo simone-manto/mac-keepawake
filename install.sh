@@ -5,6 +5,7 @@
 #   ./install.sh --check    non scrive niente: dice solo cosa manca
 #   ./install.sh --solo claude-code    solo il metodo 1 (schermo aperto)
 #   ./install.sh --solo f6             solo il metodo 2 (coperchio chiuso)
+#   ./install.sh --solo maccy          solo il trigger F4 per Maccy
 #
 # Nessun passo e' distruttivo: ogni file di configurazione toccato viene
 # copiato in un .bak-keepawake-<data> prima della modifica.
@@ -52,7 +53,7 @@ fi
 
 # ---------------------------------------------------------------- metodo 2
 if [ "$SOLO" = "tutto" ] || [ "$SOLO" = "f6" ]; then
-  titolo "METODO 2 — coperchio chiuso: F6 e il Mac non si blocca mai"
+  titolo "METODO 2 — coperchio chiuso: F5 e il Mac non si blocca mai"
 
   DEST="$HOME/.local/bin/keepawake-toggle"
   if [ -n "$CHECK" ]; then
@@ -90,6 +91,34 @@ if [ "$SOLO" = "tutto" ] || [ "$SOLO" = "f6" ]; then
   else
     python3 "$QUI/lib/merge-karabiner.py" $CHECK || esito=1
   fi
+fi
+
+# ---------------------------------------------------------------- maccy (F4)
+if [ "$SOLO" = "tutto" ] || [ "$SOLO" = "maccy" ]; then
+  titolo "F4 — apre/chiude il popup di Maccy (storico appunti)"
+
+  DEST="$HOME/.local/bin/maccy-trigger"
+  if [ -n "$CHECK" ]; then
+    if cmp -s "$QUI/f4-maccy/maccy-trigger" "$DEST" 2>/dev/null; then
+      echo "  script: gia' installato e aggiornato ($DEST)"
+    else
+      echo "  manca (o e' diverso): $DEST"; esito=1
+    fi
+  else
+    mkdir -p "$HOME/.local/bin"
+    install -m 755 "$QUI/f4-maccy/maccy-trigger" "$DEST"
+    echo "  script: $DEST"
+  fi
+
+  if [ ! -d "/Applications/Maccy.app" ]; then
+    echo "  Maccy non installato: https://maccy.app (o: brew install --cask maccy)"
+    esito=1
+  else
+    python3 "$QUI/lib/merge-karabiner.py" $CHECK || esito=1
+  fi
+
+  echo "  Accessibilita': concedi l'accesso a $DEST in"
+  echo "    Impostazioni > Privacy e Sicurezza > Accessibilita', altrimenti F4 non funziona."
 fi
 
 titolo "STATO ATTUALE"

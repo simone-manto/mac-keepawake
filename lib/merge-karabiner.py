@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Aggiunge la regola F6 -> keepawake-toggle al profilo Karabiner attivo.
+"""Aggiunge le regole Karabiner (F5 -> keepawake-toggle, F4 -> maccy-trigger)
+al profilo Karabiner attivo.
 
-Idempotente: riconosce la regola gia' installata dallo shell_command, non dalla
-descrizione (la descrizione la puoi cambiare, il comando no).
-Con --check non scrive niente (exit 1 se la regola manca).
+Idempotente: riconosce una regola gia' installata dallo shell_command, non
+dalla descrizione (la descrizione la puoi cambiare, il comando no).
+Con --check non scrive niente (exit 1 se una regola manca).
 """
 import json
 import os
@@ -13,36 +14,47 @@ from datetime import datetime
 
 HOME = os.path.expanduser("~")
 KARABINER = os.path.join(HOME, ".config", "karabiner", "karabiner.json")
-REGOLA = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                      "..", "f6-toggle", "karabiner-f6.json")
-COMANDO = os.path.join(HOME, ".local", "bin", "keepawake-toggle")
+
+# (file regola nel repo, basename del comando installato)
+REGOLE = [
+    (os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                  "..", "f6-toggle", "karabiner-f5.json"),
+     "keepawake-toggle"),
+    (os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                  "..", "f4-maccy", "karabiner-f4-maccy.json"),
+     "maccy-trigger"),
+]
 
 CHECK = "--check" in sys.argv
 
 
-def contiene_comando(nodo):
+def contiene_comando(nodo, basename):
     """Cerca ricorsivamente il nostro shell_command dentro una regola."""
     if isinstance(nodo, dict):
-        if nodo.get("shell_command", "").endswith("keepawake-toggle"):
+        if nodo.get("shell_command", "").endswith(basename):
             return True
-        return any(contiene_comando(v) for v in nodo.values())
+        return any(contiene_comando(v, basename) for v in nodo.values())
     if isinstance(nodo, list):
-        return any(contiene_comando(v) for v in nodo)
+        return any(contiene_comando(v, basename) for v in nodo)
     return False
+
+
+def carica_regola(path, basename):
+    """Carica il file regola e sostituisce il placeholder col percorso vero."""
+    with open(path) as f:
+        regola = json.load(f)
+    comando = os.path.join(HOME, ".local", "bin", basename)
+    for m in regola.get("manipulators", []):
+        for azione in m.get("to", []):
+            if "shell_command" in azione:
+                azione["shell_command"] = comando
+    return regola
 
 
 def main():
     if not os.path.exists(KARABINER):
         print("  karabiner.json non trovato: apri Karabiner-Elements almeno una volta")
         return 1
-
-    with open(REGOLA) as f:
-        regola = json.load(f)
-    # il file nel repo porta il placeholder: qui diventa il percorso vero
-    for m in regola.get("manipulators", []):
-        for azione in m.get("to", []):
-            if "shell_command" in azione:
-                azione["shell_command"] = COMANDO
 
     with open(KARABINER) as f:
         conf = json.load(f)
@@ -52,18 +64,27 @@ def main():
         print("  nessun profilo Karabiner nel file")
         return 1
     profilo = next((p for p in profili if p.get("selected")), profili[0])
-
     regole = profilo.setdefault("complex_modifications", {}).setdefault("rules", [])
 
-    if any(contiene_comando(r) for r in regole):
-        print(f"  regola F6: gia' presente nel profilo \"{profilo.get('name')}\", non tocco niente")
+    mancanti = []
+    for path, basename in REGOLE:
+        if any(contiene_comando(r, basename) for r in regole):
+            print(f"  regola {basename}: gia' presente, non tocco niente")
+            continue
+        mancanti.append((path, basename))
+
+    if not mancanti:
         return 0
 
-    print(f"  {'manca' if CHECK else 'aggiungo'}: regola F6 nel profilo \"{profilo.get('name')}\"")
+    for path, basename in mancanti:
+        print(f"  {'manca' if CHECK else 'aggiungo'}: {basename} nel profilo \"{profilo.get('name')}\"")
+
     if CHECK:
         return 1
 
-    regole.append(regola)
+    for path, basename in mancanti:
+        regole.append(carica_regola(path, basename))
+
     backup = f"{KARABINER}.bak-keepawake-{datetime.now():%Y%m%d-%H%M%S}"
     shutil.copy2(KARABINER, backup)
     print(f"  backup: {backup}")

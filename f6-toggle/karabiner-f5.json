@@ -1,10 +1,10 @@
 {
-  "description": "F6 -> toggle KeepAwake (coperchio chiuso + batteria) con notifica ON/OFF",
+  "description": "F5 -> toggle KeepAwake (coperchio chiuso + batteria) con notifica ON/OFF",
   "manipulators": [
     {
       "type": "basic",
       "from": {
-        "key_code": "f6",
+        "key_code": "f5",
         "modifiers": { "optional": ["any"] }
       },
       "to": [

@@ -1,0 +1,15 @@
+#!/bin/bash
+# maccy-trigger — apre/chiude il popup di Maccy (storico appunti).
+# Azionato da Karabiner su F4. Simula la pressione dell'hotkey di popup
+# gia' configurato in Maccy (di default Cmd+Shift+C) usando osascript.
+# Richiede che a questo script (anche via "binario shell" inserito in
+# Impostazioni > Privacy e Sicurezza > Accessibilita') sia concesso l'accesso.
+
+export PATH="/usr/bin:/bin:/usr/sbin:/sbin"
+
+# Modifica qui se l'hotkey di Maccy e' diverso.
+# Di default Maccy usa Cmd+Shift+C per il popup.
+osascript -e 'tell application "System Events" to keystroke "c" using {command down, shift down}' >/dev/null 2>&1 &
+if [ $? -ne 0 ]; then
+  osascript -e 'display notification "Maccy F4: manca l\u0027accesso Accessibilita\u0027." with title "Maccy trigger" sound name "Sosumi"' >/dev/null 2>&1 &
+fi

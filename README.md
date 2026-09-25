@@ -7,8 +7,8 @@ convivono, e nella pratica servono in momenti diversi della stessa giornata.
 |---|---|---|
 | **Quando** | Sei alla scrivania, un agente sta lavorando | Chiudi il portatile e te ne vai |
 | **Cosa fa** | Lo schermo si oscura, il Mac non dorme | Il Mac non dorme e non si blocca **mai** |
-| **Chi lo accende** | Da solo, quando parte una sessione Claude Code | Tu, premendo **F6** |
-| **Chi lo spegne** | Da solo, a fine turno | Tu, ripremendo F6 |
+| **Chi lo accende** | Da solo, quando parte una sessione Claude Code | Tu, premendo **F5** |
+| **Chi lo spegne** | Da solo, a fine turno | Tu, ripremendo F5 |
 | **Come** | `caffeinate -ims` legato al processo | `pmset -a disablesleep 1` + `caffeinate -dimsu` |
 | **Serve root?** | No | Sì, ma solo per due comandi (regola `sudoers` mirata) |
 | **Rischio se te lo dimentichi acceso** | Nessuno: muore con la sessione | Il Mac resta sveglio **nello zaino** finché non si scarica |
@@ -31,6 +31,7 @@ viene copiato in un `.bak-keepawake-<data>` prima della modifica.
 ./install.sh --check              # non scrive niente: dice solo cosa manca
 ./install.sh --solo claude-code   # solo il metodo 1
 ./install.sh --solo f6            # solo il metodo 2
+./install.sh --solo maccy         # solo il trigger F4 per Maccy
 ./stato.sh                        # in che stato sono adesso i due metodi
 ```
 
@@ -96,6 +97,9 @@ e portartelo via senza che il job muoia.
 Un tasto lo accende, lo stesso tasto lo spegne, e una notifica di sistema dice sempre
 in che stato sei: ⚡️ ON con suono *Hero*, ☕️ OFF con suono *Bottle*.
 
+In più, un'app in barra dei menu mostra **⚡️ solo quando è attivo**, così non ci si
+dimentica di spegnerlo (vedi la sezione *App in barra dei menu*).
+
 ### La regola sudo — leggi prima di incollare
 
 `pmset -a disablesleep` vuole root. Per non digitare la password a ogni pressione del
@@ -123,7 +127,7 @@ chiedendoti la password nel terminale.
 
 Con [Karabiner-Elements](https://karabiner-elements.pqrs.org/), `install.sh` aggiunge la
 regola al profilo attivo — e Karabiner ricarica da solo appena il file viene salvato.
-A mano: incolla `f6-toggle/karabiner-f6.json` dentro
+A mano: incolla `f6-toggle/karabiner-f5.json` dentro
 `~/.config/karabiner/karabiner.json` → `profiles[].complex_modifications.rules`,
 sostituendo `/Users/TUO_UTENTE/` con il tuo percorso.
 
@@ -133,17 +137,18 @@ intercettare. Karabiner si inserisce più a monte e funziona. Per lo stesso moti
 scegli un tasto che ha già una funzione media (F3 = Mission Control, F4 = Spotlight),
 scrivi **più `from` alternativi** nella regola: non è prevedibile in che forma il tasto
 si presenti. `Karabiner-EventViewer.app` ti dice il nome vero.
-F6 nella configurazione di default non ha funzione media, quindi qui basta `key_code: f6`.
+F5 nella configurazione di default non ha funzione media, quindi qui basta `key_code: f5`.
 
 **`disablesleep` è globale e non ha timeout.** Se resti in ON, il Mac non dorme mai —
 anche chiuso nello zaino, anche a batteria, finché non si scarica. Non è un bug: è
-esattamente ciò che hai chiesto. La notifica ⚡️/☕️ esiste per questo. Spegnilo a fine job.
+esattamente ciò che hai chiesto. La notifica ⚡️/☕️ (e il fulmine in barra) esistono per
+questo. Spegnilo a fine job.
 
 **Senza Karabiner** lo script funziona lo stesso — `~/.local/bin/keepawake-toggle` —
 e lo puoi legare a un Comando Rapido, a un tasto del mouse o a un alias di shell.
 
 **File:** `f6-toggle/keepawake-toggle` → `~/.local/bin/`,
-`f6-toggle/karabiner-f6.json` → regola Karabiner,
+`f6-toggle/karabiner-f5.json` → regola Karabiner,
 `f6-toggle/sudoers-keepawake` → `/etc/sudoers.d/keepawake`.
 
 ---
@@ -151,8 +156,8 @@ e lo puoi legare a un Comando Rapido, a un tasto del mouse o a un alias di shell
 ## Come convivono i due metodi
 
 Non si pestano i piedi, e non è un caso: i due `caffeinate` hanno righe di comando
-diverse (`-ims` il metodo 1, `-dimsu` il metodo 2), e il `pkill` del toggle F6 cerca
-**esattamente** `caffeinate -dimsu`. Quindi premere F6 non uccide il caffeinate di una
+diverse (`-ims` il metodo 1, `-dimsu` il metodo 2), e il `pkill` del toggle F5 cerca
+**esattamente** `caffeinate -dimsu`. Quindi premere F5 non uccide il caffeinate di una
 sessione Claude Code che sta lavorando, e chiudere una sessione non spegne il KeepAwake
 che hai acceso col tasto.
 
@@ -180,18 +185,68 @@ tail ~/.claude/keep-awake/log.txt # gli hook stanno scattando?
 
 ---
 
+## App in barra dei menu — il fulmine quando è attivo
+
+**Il problema.** Il metodo 2 non ha timeout: se ti dimentichi di spegnerlo, il Mac resta
+sveglio nello zaino finché non si scarica. Una notifica una-tantum è facile da perdere.
+
+**La soluzione.** Una piccola app (`menubar/`) che mostra **⚡️ in barra dei menu solo
+quando `disablesleep` è 1**, e niente quando è spento. Clic sull'icona → menu con
+attiva/disattiva ed esci.
+
+```bash
+cd menubar && ./build.sh
+```
+
+Poi abilitala all'avvio automatico da *Impostazioni di Sistema → Generali → Elementi
+login* (aggiungi `~/Applications/KeepAwake.app`).
+
+**Perché un bundle `.app` e non un binario nudo.** Su **macOS 26 (Tahoe)** un
+`NSStatusItem` creato da un eseguibile non impaginato come `.app` viene piazzato
+**fuori schermo** (`screen = nil`) e non appare mai. Per lo stesso motivo, su Tahoe
+l'API giusta non è più `NSStatusItem` ma **`MenuBarExtra` (SwiftUI)**, che l'app usa.
+In più macOS 26 ha un nuovo controllo privacy: al primo avvio può servire abilitare
+l'app in *Impostazioni di Sistema → Barra dei Menu*.
+
+**File:** `menubar/MenuBarExtra.swift`, `menubar/Info.plist`, `menubar/build.sh`.
+
+---
+
+## F4 — Maccy (storico appunti)
+
+**Il problema.** Maccy è un gestore di appunti che apre il suo popup con una hotkey.
+Vuoi richiamarlo con un tasto dedicato, **F4**.
+
+**La soluzione.** `install.sh` installa `~/.local/bin/maccy-trigger`, uno script che
+simula la pressione dell'hotkey di popup di Maccy (di default `⌘⇧C`) via `osascript`,
+e aggiunge la regola Karabiner **F4 → maccy-trigger**.
+
+**Serve l'Accessibilità.** Aggiungi `~/.local/bin/maccy-trigger` (oppure il Terminale)
+in *Impostazioni → Privacy e Sicurezza → Accessibilità*, altrimenti `osascript` non
+può inviare il tasto e F4 non fa nulla.
+
+Se in Maccy usi un'altra scorciatoia per il popup, cambiala nello script
+(`keystroke "c" using {command down, shift down}`).
+
+**File:** `f4-maccy/maccy-trigger` → `~/.local/bin/`,
+`f4-maccy/karabiner-f4-maccy.json` → regola Karabiner.
+
+---
+
 ## Disinstallazione
 
 ```bash
 sudo rm /etc/sudoers.d/keepawake                 # la riga sudo senza password
 pmset -g | grep SleepDisabled                    # se e' 1: sudo pmset -a disablesleep 0
-rm ~/.local/bin/keepawake-toggle
+rm ~/.local/bin/keepawake-toggle ~/.local/bin/maccy-trigger
 rm -rf ~/.claude/keep-awake ~/.claude/keep-awake.sh
+rm -rf ~/Applications/KeepAwake.app ~/Library/Application\ Support/keepawake-menubar
 ```
 
-Restano da togliere a mano le due voci nei JSON: la regola F6 in `karabiner.json` e i
-quattro hook `keep-awake.sh` in `~/.claude/settings.json`. I backup `.bak-keepawake-*`
-che l'installer ha lasciato accanto ai due file contengono la versione precedente.
+Restano da togliere a mano le voci nei JSON: le regole F5 e F4 in `karabiner.json`, i
+quattro hook `keep-awake.sh` in `~/.claude/settings.json`, e l'app dagli Elementi login.
+I backup `.bak-keepawake-*` che l'installer ha lasciato accanto ai file contengono la
+versione precedente.
 
 ---
 

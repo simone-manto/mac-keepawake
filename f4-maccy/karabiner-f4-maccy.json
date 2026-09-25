@@ -1,0 +1,15 @@
+{
+  "description": "F4 -> apre/chiude il popup di Maccy (storico appunti)",
+  "manipulators": [
+    {
+      "type": "basic",
+      "from": {
+        "key_code": "f4",
+        "modifiers": { "optional": ["any"] }
+      },
+      "to": [
+        { "shell_command": "/Users/TUO_UTENTE/.local/bin/maccy-trigger" }
+      ]
+    }
+  ]
+}
