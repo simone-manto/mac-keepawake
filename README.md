@@ -18,10 +18,15 @@ convivono, e nella pratica servono in momenti diversi della stessa giornata.
 ## Installazione
 
 ```bash
-git clone https://github.com/alexandercarrelli-byte/mac-keepawake.git
+brew install --cask karabiner-elements   # serve per i tasti F5 e F4
+git clone https://github.com/simone-manto/mac-keepawake.git
 cd mac-keepawake
 ./install.sh
 ```
+
+Karabiner-Elements, al primo avvio, chiede di abilitare il suo driver e il
+*Monitoraggio input* in *Impostazioni di Sistema → Privacy e Sicurezza*: senza quei
+permessi le regole F5 e F4 non scattano.
 
 L'installer è **idempotente** e non distrugge niente: se un pezzo c'è già lo dice e
 tira dritto, e ogni file di configurazione che tocca (`settings.json`, `karabiner.json`)
