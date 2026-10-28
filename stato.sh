@@ -23,7 +23,7 @@ fi
 # --- metodo 2: disablesleep globale
 stato="$(pmset -g 2>/dev/null | awk '/SleepDisabled/{print $2}')"
 if [ "${stato:-0}" = "1" ]; then
-  echo "  metodo 2  ⚡️ ON    — coperchio chiuso e batteria: il Mac NON dormira'. Ricordati di spegnerlo (F6)."
+  echo "  metodo 2  ⚡️ ON    — coperchio chiuso e batteria: il Mac NON dormira'. Ricordati di spegnerlo (F5)."
 else
   echo "  metodo 2  ☕️ OFF   — sonno normale: chiudendo il coperchio il Mac si addormenta"
 fi
